@@ -1,6 +1,7 @@
 package main
 
 import (
+	"final-project/pkg/api"
 	"final-project/pkg/date"
 	"final-project/pkg/db"
 	"log"
@@ -21,6 +22,8 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 
 	http.HandleFunc("/api/nextdate", handleNextDate)
+	http.HandleFunc("/api/task", api.TaskHandler)
+	http.HandleFunc("/api/tasks", api.TasksHandler)
 
 	log.Printf("Сервер запущен на порту %d", port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(port), nil))

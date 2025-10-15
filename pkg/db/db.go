@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 
 	_ "modernc.org/sqlite"
 )
@@ -46,4 +47,20 @@ func Init(dbFile string) error {
 	}
 
 	return nil
+}
+
+func AddTask(task *Task) (string, error) {
+	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)`
+
+	result, err := DB.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	if err != nil {
+		return "", fmt.Errorf("ошибка добавления задачи: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return "", fmt.Errorf("ошибка получения ID: %v", err)
+	}
+
+	return strconv.FormatInt(id, 10), nil
 }
