@@ -24,13 +24,13 @@ func main() {
 	http.HandleFunc("/api/nextdate", handleNextDate)
 	http.HandleFunc("/api/task", api.TaskHandler)
 	http.HandleFunc("/api/tasks", api.TasksHandler)
+	http.HandleFunc("/api/task/done", api.TaskDoneHandler)
 
 	log.Printf("Сервер запущен на порту %d", port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(port), nil))
 }
 
 func handleNextDate(w http.ResponseWriter, r *http.Request) {
-
 	nowStr := r.URL.Query().Get("now")
 	dateStr := r.URL.Query().Get("date")
 	repeat := r.URL.Query().Get("repeat")
@@ -52,7 +52,6 @@ func handleNextDate(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPort() int {
-
 	portStr := os.Getenv("TODO_PORT")
 	if portStr != "" {
 		port, err := strconv.Atoi(portStr)

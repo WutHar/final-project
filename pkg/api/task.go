@@ -13,10 +13,52 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		addTaskHandler(w, r)
+	case http.MethodGet:
+		getTaskHandler(w, r)
+	case http.MethodPut:
+		updateTaskHandler(w, r)
+	case http.MethodDelete:
+		deleteTaskHandler(w, r)
 	default:
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 	}
 }
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeJSONError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.DeleteTask(id); err != nil {
+		writeJSONError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{})
+}
+
+func TaskDoneHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeJSONError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.CompleteTask(id); err != nil {
+		writeJSONError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{})
+}
+
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
 
@@ -45,10 +87,59 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]interface{}{"id": id})
 }
-func processTaskDate(task *db.Task, now time.Time) error {
-	today := now.Format("20060102")
 
-	fmt.Printf("DEBUG: Input - date: %s, title: %s, repeat: %s\n", task.Date, task.Title, task.Repeat)
+func getTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeJSONError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	task, err := db.GetTask(id)
+	if err != nil {
+		writeJSONError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, task)
+}
+
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	var task db.Task
+
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		writeJSONError(w, "Ошибка декодирования JSON", http.StatusBadRequest)
+		return
+	}
+
+	if task.ID == "" {
+		writeJSONError(w, "Не указан идентификатор задачи", http.StatusBadRequest)
+		return
+	}
+
+	if task.Title == "" {
+		writeJSONError(w, "Не указан заголовок задачи", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
+	if err := processTaskDate(&task, now); err != nil {
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := db.UpdateTask(&task); err != nil {
+		writeJSONError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{})
+}
+
+func processTaskDate(task *db.Task, now time.Time) error {
+	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	today := todayTime.Format("20060102")
+
 	if task.Date == "today" {
 		task.Date = today
 	}
@@ -61,27 +152,20 @@ func processTaskDate(task *db.Task, now time.Time) error {
 	if err != nil {
 		return fmt.Errorf("некорректный формат даты")
 	}
+	parsedDate = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+
 	if task.Repeat != "" {
-
-		if task.Date == today && task.Repeat == "d 1" {
-
-			task.Date = today
-		} else {
-
-			nextDate, err := date.NextDate(now, task.Date, task.Repeat)
-			if err != nil {
-				return fmt.Errorf("некорректное правило повторения: %v", err)
-			}
-			task.Date = nextDate
+		nextDate, err := date.NextDate(todayTime, task.Date, task.Repeat)
+		if err != nil {
+			return fmt.Errorf("некорректное правило повторения: %v", err)
 		}
+		task.Date = nextDate
 	} else {
-
-		if parsedDate.Before(now) {
+		if parsedDate.Before(todayTime) {
 			task.Date = today
 		}
 	}
 
-	//fmt.Printf("DEBUG: Output - date: %s\n", task.Date)
 	return nil
 }
 
