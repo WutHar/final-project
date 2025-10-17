@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	if err := db.Init("scheduler.db"); err != nil {
 		log.Fatalf("Ошибка инициализации БД: %v", err)
 	}

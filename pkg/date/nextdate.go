@@ -8,7 +8,6 @@ import (
 )
 
 func NextDate(now time.Time, dateStr string, repeat string) (string, error) {
-
 	if repeat == "" {
 		return "", fmt.Errorf("пустое правило повторения")
 	}
@@ -71,7 +70,6 @@ func handleYearlyRule(now time.Time, date time.Time) (string, error) {
 }
 
 func afterNow(date, now time.Time) bool {
-
 	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return date.After(now)

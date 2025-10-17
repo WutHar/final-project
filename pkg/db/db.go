@@ -24,7 +24,6 @@ CREATE INDEX idx_date ON scheduler(date);
 `
 
 func Init(dbFile string) error {
-
 	_, err := os.Stat(dbFile)
 	install := os.IsNotExist(err)
 

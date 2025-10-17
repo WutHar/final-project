@@ -72,9 +72,9 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
+	today := date.Today()
 
-	if err := processTaskDate(&task, now); err != nil {
+	if err := processTaskDate(&task, today); err != nil {
 		writeJSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -122,8 +122,8 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	if err := processTaskDate(&task, now); err != nil {
+	today := date.Today()
+	if err := processTaskDate(&task, today); err != nil {
 		writeJSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -136,34 +136,29 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{})
 }
 
-func processTaskDate(task *db.Task, now time.Time) error {
-	todayTime := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	today := todayTime.Format("20060102")
+func processTaskDate(task *db.Task, today string) error {
+	if task.Date != "" && task.Date != "today" {
+		_, err := time.Parse("20060102", task.Date)
+		if err != nil {
+			return fmt.Errorf("некорректный формат даты")
+		}
+	}
 
-	if task.Date == "today" {
+	if task.Date == "today" || task.Date == "" {
 		task.Date = today
 	}
 
-	if task.Date == "" {
+	if task.Date < today && task.Date != "" && task.Date != "today" {
 		task.Date = today
 	}
-
-	parsedDate, err := time.Parse("20060102", task.Date)
-	if err != nil {
-		return fmt.Errorf("некорректный формат даты")
-	}
-	parsedDate = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
 
 	if task.Repeat != "" {
-		nextDate, err := date.NextDate(todayTime, task.Date, task.Repeat)
+		now := time.Now()
+		_, err := date.NextDate(now, task.Date, task.Repeat)
 		if err != nil {
-			return fmt.Errorf("некорректное правило повторения: %v", err)
+			return fmt.Errorf("некорректное правило повторения")
 		}
-		task.Date = nextDate
-	} else {
-		if parsedDate.Before(todayTime) {
-			task.Date = today
-		}
+		task.Date = today
 	}
 
 	return nil

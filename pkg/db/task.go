@@ -45,6 +45,7 @@ func Tasks(limit int) ([]*Task, error) {
 
 	return tasks, nil
 }
+
 func GetTask(id string) (*Task, error) {
 	var task Task
 	var dbID int64
@@ -68,7 +69,6 @@ func GetTask(id string) (*Task, error) {
 }
 
 func UpdateTask(task *Task) error {
-
 	taskID, err := strconv.ParseInt(task.ID, 10, 64)
 	if err != nil {
 		return fmt.Errorf("некорректный идентификатор задачи")
@@ -123,18 +123,38 @@ func CompleteTask(id string) error {
 	}
 
 	if task.Repeat != "" {
-
-		fixedTime := time.Date(2025, 10, 16, 0, 0, 0, 0, time.UTC)
-
-		nextDate, err := date.NextDate(fixedTime, task.Date, task.Repeat)
+		now := time.Now()
+		nextDate, err := date.NextDate(now, task.Date, task.Repeat)
 		if err != nil {
-			return fmt.Errorf("ошибка вычисления следующей даты: %v", err)
+			return err
 		}
-
 		task.Date = nextDate
 		return UpdateTask(task)
 	} else {
-
 		return DeleteTask(id)
 	}
+}
+
+func UpdateDate(next string, id string) error {
+	taskID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return fmt.Errorf("некорректный идентификатор задачи")
+	}
+
+	query := `UPDATE scheduler SET date = ? WHERE id = ?`
+	result, err := DB.Exec(query, next, taskID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления даты: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка проверки обновления: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("задача не найдена")
+	}
+
+	return nil
 }

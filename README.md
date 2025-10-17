@@ -16,7 +16,7 @@ go run main.go
 http://localhost:7540
 
 ## инструкция по запуску тестов
-go test ./tests
+go test ./tests или go test ./tests -count=1
 
 ##API Endpionts
 GET / - Главная страница
